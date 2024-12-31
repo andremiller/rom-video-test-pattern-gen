@@ -12,9 +12,12 @@ DCONFIGS = {
     "PET9" : {
         "HORIZONTAL_FREQ" : 15625, # Hz
         "VERTICAL_FREQ" : 60, # Hz"
+        "VERT_DRIVE_INVERT" : True, # False for active-high, True for active-low
         "VERT_DRIVE_START_OFFSET" : -5, # Vertical drive starts 5us before start of frame
         "VERT_DRIVE_LINES" : 20, # Vertical drive is active for 20 lines at start of frame
+        "HOR_DRIVE_INVERT" : False, # False for active-high, True for active-low
         "HOR_DRIVE_DURATION" : 24, # Horizontal drive is 24us long at start of line
+        "VID_INVERT" : True, # False for active-high, True for active-low
         "VID_START_OFFSET" : 18, # Video starts 18us after start of line
         "VID_DURATION" : 40, # Video is 40us long
         "VID_START_LINE" : 40, # Start video on horizontal line 40
@@ -23,9 +26,12 @@ DCONFIGS = {
     "PET12" : {
         "HORIZONTAL_FREQ" : 20000, # Hz
         "VERTICAL_FREQ" : 50, # Hz"
+        "VERT_DRIVE_INVERT" : True, # False for active-high, True for active-low
         "VERT_DRIVE_START_OFFSET" : -5, # Vertical drive starts 5us before start of frame
         "VERT_DRIVE_LINES" : 16, # Vertical drive is active for 16 lines at start of frame
-        "HOR_DRIVE_DURATION" : 24, # Horizontal drive is 24us long at start of line
+        "HOR_DRIVE_INVERT" : True, # False for active-high, True for active-low
+        "HOR_DRIVE_DURATION" : 15, # Horizontal drive is 15us long at start of line
+        "VID_INVERT" : False, # False for active-high, True for active-low
         "VID_START_OFFSET" : 10, # Video starts 10us after start of line
         "VID_DURATION" : 40, # Video is 40us long
         "VID_START_LINE" : 80, # Start video on horizontal line 80
@@ -105,12 +111,22 @@ def main(img_file_names, invert_image=False):
     output = []
     for i in range(ROWS*COLUMNS):
         v = 0b00000000
+
         # Video starts at bit 0 for first image
         for bit, grid_array_vid in enumerate(grid_arrays_vid):
-            v = v | (( 1 - int(grid_array_vid[i]))   << bit)  # Video
-        v = v | ((     int(grid_array_horiz[i])) << 5)  # Horiz
-        
-        v = v | (( 1 - int(grid_array_vert[i]))  << 6)  # Vert
+            v = v | (( int(grid_array_vid[i]))   << bit)  # Video
+            if DCONFIGS[DISPLAY_TYPE]["VID_INVERT"]:
+                v = v ^ (1 << bit) # Invert video bit
+
+        # Horiz
+        v = v | (( int(grid_array_horiz[i])) << 5) 
+        if DCONFIGS[DISPLAY_TYPE]["HOR_DRIVE_INVERT"]:
+            v = v ^ (1 << 5) # Invert horiz bit
+        # Vert
+        v = v | (( int(grid_array_vert[i]))  << 6)
+        if DCONFIGS[DISPLAY_TYPE]["VERT_DRIVE_INVERT"]:
+            v = v ^ (1 << 6) # Invert vert bit
+
         output.append(v)
 
     # Add reset on last byte
